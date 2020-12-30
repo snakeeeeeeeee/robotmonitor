@@ -116,36 +116,48 @@ public class ChromeHandle implements Job {
         if (hwnd == null) {
             System.out.println("WeChat is not running");
         } else {
-            User32.INSTANCE.ShowWindow(hwnd, 9); // SW_RESTORE
-            //函数将创建指定窗口的线程放入前台并激活该窗口。键盘输入指向窗口，并为用户更改各种视觉提示。
-            User32.INSTANCE.SetForegroundWindow(hwnd);
-
             //生成一个模仿人操作行为的机器人
             Robot robot = new Robot();
             //粘贴图片到微信
-            doPaste(robot, clientImagePath);
-            doPaste(robot, videoRingImagePath);
+            doPaste(hwnd, robot, clientImagePath);
+            doPaste(hwnd, robot, videoRingImagePath);
             //粘贴文本内容
-            pasteStrToWeChat(robot, properties.getProperty("msg_content"));
-            //回车发送
-            //robot.keyPress(KeyEvent.VK_ENTER);
+            pasteStrToWeChat(hwnd, robot, properties.getProperty("msg_content"));
         }
     }
 
-    private static void pasteStrToWeChat(Robot robot, String text) throws Exception {
+    /**
+     * 激活窗体
+     * @param hwnd
+     */
+    private static void activityWindow(WinDef.HWND hwnd){
+        User32.INSTANCE.ShowWindow(hwnd, 9); // SW_RESTORE
+        //函数将创建指定窗口的线程放入前台并激活该窗口。键盘输入指向窗口，并为用户更改各种视觉提示。
+        User32.INSTANCE.SetForegroundWindow(hwnd);
+    }
+
+    private static void pasteStrToWeChat(WinDef.HWND hwnd, Robot robot, String text) throws Exception {
         String msgTimeStr = getMsgTimeStr();
         String msg = String.format(text, msgTimeStr);
         //将文本内容粘贴到剪切板
         setClipboardString(msg);
+        //激活窗体
+        activityWindow(hwnd);
         //粘贴到微信
         robotPasteToWeChat(robot);
+        //回车发送
+        robot.keyPress(KeyEvent.VK_ENTER);
     }
 
-    private static void doPaste(Robot robot, String imagePath) throws Exception {
+    private static void doPaste(WinDef.HWND hwnd, Robot robot, String imagePath) throws Exception {
         //拷贝图片到剪贴板
         copyImage(imagePath);
+        //激活窗体
+        activityWindow(hwnd);
         //粘贴到微信
         robotPasteToWeChat(robot);
+        //回车发送
+        robot.keyPress(KeyEvent.VK_ENTER);
     }
 
     private static void robotPasteToWeChat(Robot robot) throws InterruptedException {
@@ -219,7 +231,6 @@ public class ChromeHandle implements Job {
         File srcFile = driver.getScreenshotAs(OutputType.FILE);
         //保存截图
         String path = filePath + imageName;
-        System.out.println("srcFile: " + srcFile + ":::::: path: " + path);
         FileUtils.copyFile(srcFile, new File(path));
         return path;
     }
@@ -289,7 +300,7 @@ public class ChromeHandle implements Job {
         // 获取系统剪贴板
         Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
         // 封装data内容
-        Transferable ts = new StringSelection(data);
+        Transferable ts = new MyStringSelection(data);
         // 把文本内容设置到系统剪贴板
         clipboard.setContents(ts, null);
     }
@@ -315,6 +326,30 @@ public class ChromeHandle implements Job {
                 throw new UnsupportedFlavorException(flavor);
             }
             return image;
+        }
+
+    }
+
+    public static class MyStringSelection implements Transferable {
+        private String text;
+
+        public MyStringSelection(String text) {
+            this.text = text;
+        }
+
+        public DataFlavor[] getTransferDataFlavors() {
+            return new DataFlavor[]{DataFlavor.stringFlavor};
+        }
+
+        public boolean isDataFlavorSupported(DataFlavor flavor) {
+            return DataFlavor.stringFlavor.equals(flavor);
+        }
+
+        public Object getTransferData(DataFlavor flavor) throws UnsupportedFlavorException, IOException {
+            if (!DataFlavor.stringFlavor.equals(flavor)) {
+                throw new UnsupportedFlavorException(flavor);
+            }
+            return text;
         }
 
     }
