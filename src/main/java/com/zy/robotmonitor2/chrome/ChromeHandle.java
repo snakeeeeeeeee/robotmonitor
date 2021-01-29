@@ -228,6 +228,16 @@ public class ChromeHandle implements Job {
         return frontStr + " - " + nowStr;
     }
 
+    private static String saveImage2(ChromeDriver driver, String imageName) throws IOException {
+        //获取内容区域元素
+        File srcFile = driver.getScreenshotAs(OutputType.FILE);
+        //保存截图
+        String path = filePath + imageName;
+        System.out.println("srcFile: " + srcFile + ":::::: path: " + path);
+        FileUtils.copyFile(srcFile, new File(path));
+        return path;
+    }
+
     private static String saveImage(ChromeDriver driver, String imageName) throws IOException {
         WebElement dashboard = driver.findElementByClassName("dashboard-scroll");
         WebElement body = driver.findElementByTagName("body");
