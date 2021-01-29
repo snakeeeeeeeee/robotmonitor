@@ -4,6 +4,7 @@ import com.sun.jna.platform.win32.User32;
 import com.sun.jna.platform.win32.WinDef;
 import org.apache.commons.io.FileUtils;
 import org.openqa.selenium.By;
+import org.openqa.selenium.Dimension;
 import org.openqa.selenium.Keys;
 import org.openqa.selenium.OutputType;
 import org.openqa.selenium.WebElement;
@@ -34,6 +35,7 @@ public class ChromeHandle implements Job {
     private static String filePath;
     private static String clientImgPath;
     private static String videoRingImgPath;
+    private static Properties properties;
 
     static {
         try {
@@ -58,7 +60,7 @@ public class ChromeHandle implements Job {
 
     public static void init() {
         try {
-            Properties properties = initProperties();
+            properties = initProperties();
             String startExecute = properties.getProperty("start_execute");
             if (Boolean.parseBoolean(startExecute)) {
                 doExecute();
@@ -227,11 +229,29 @@ public class ChromeHandle implements Job {
     }
 
     private static String saveImage(ChromeDriver driver, String imageName) throws IOException {
-        //获取内容区域元素
+        WebElement dashboard = driver.findElementByClassName("dashboard-scroll");
+        WebElement body = driver.findElementByTagName("body");
+        org.openqa.selenium.Dimension bodySize = null;
+        Dimension dashboardSize = null;
+        // 缩小网页内容后，网页内容宽度，高度会变高，比截取的图片宽度还高，在裁剪的计算x,y轴会超出图片大小报错，在缩放前按照正常的比例获取裁剪内容内容大小
+        if (body != null && dashboard != null) {
+            bodySize = body.getSize();
+            dashboardSize = dashboard.getSize();
+        }
+        // 网页缩小
+        if (properties.containsKey("zoom")) {
+            driver.executeScript("document.body.style.zoom='" + properties.getProperty("zoom") + "'");
+        }
+        // 获取内容区域元素
         File srcFile = driver.getScreenshotAs(OutputType.FILE);
-        //保存截图
+        BufferedImage bufImage = ImageIO.read(srcFile);
+        if (bodySize != null && dashboardSize != null) {
+            bufImage = bufImage.getSubimage(bodySize.getWidth() - dashboardSize.getWidth(), bodySize.getHeight() - dashboardSize.getHeight(),
+                    dashboardSize.getWidth(), dashboardSize.getHeight());
+        }
+        // 保存截图
         String path = filePath + imageName;
-        FileUtils.copyFile(srcFile, new File(path));
+        ImageIO.write(bufImage, "PNG", new File(path));
         return path;
     }
 
