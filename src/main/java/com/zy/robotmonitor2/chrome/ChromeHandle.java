@@ -2,6 +2,7 @@ package com.zy.robotmonitor2.chrome;
 
 import com.sun.jna.platform.win32.User32;
 import com.sun.jna.platform.win32.WinDef;
+import com.zy.robotmonitor2.SystemUtil;
 import org.apache.commons.io.FileUtils;
 import org.openqa.selenium.By;
 import org.openqa.selenium.Dimension;
@@ -21,6 +22,7 @@ import java.awt.event.KeyEvent;
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.time.LocalDateTime;
+import java.util.Date;
 import java.util.List;
 import java.util.Properties;
 
@@ -102,8 +104,14 @@ public class ChromeHandle implements Job {
 
     public static void doExecute() {
         try {
-            //初始化配置信息
-            Properties properties = initProperties();
+            Date now = new Date();
+            SystemUtil.validateExitSystem(now, properties.getProperty("end_time"));
+            //判断是否需要执行
+            boolean canExecute = SystemUtil.inTime(now, properties.getProperty("start_time"), properties.getProperty("end_time"));
+            if (!canExecute) {
+                System.out.println(String.format("未到达执行时间，本次执行计划结束， 当前时间：[%s]", SystemUtil.getCurrentTime()));
+                return;
+            }
 
             getImagePath("client_url", "client.png", properties, null);
             getImagePath("video_ring_url", "videoRing.png", properties, null);
@@ -130,9 +138,10 @@ public class ChromeHandle implements Job {
 
     /**
      * 激活窗体
+     *
      * @param hwnd
      */
-    private static void activityWindow(WinDef.HWND hwnd){
+    private static void activityWindow(WinDef.HWND hwnd) {
         User32.INSTANCE.ShowWindow(hwnd, 9); // SW_RESTORE
         //函数将创建指定窗口的线程放入前台并激活该窗口。键盘输入指向窗口，并为用户更改各种视觉提示。
         User32.INSTANCE.SetForegroundWindow(hwnd);
