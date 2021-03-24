@@ -277,8 +277,18 @@ public class ChromeHandle implements Job {
     private static void login(ChromeDriver driver, Properties properties) throws InterruptedException {
         //设置账号与密码， 这里因为两个css是一样的,且密码是一样的才能这样做，否则就要根据顺序去判断哪个是账号，哪个是密码了
         List<WebElement> elements = driver.findElements(By.className("css-1bjepp-input-input"));
+        int i = 0;
         for (WebElement element : elements) {
-            element.sendKeys(properties.getProperty("username"));
+            if(i == 0){
+                element.sendKeys(properties.getProperty("username"));
+            }
+            if(i == 1){
+                element.sendKeys(properties.getProperty("password"));
+            }
+            if (i > 1){
+                break;
+            }
+            i++;
         }
         // 登录
         driver.findElement(By.className("css-6ntnx5-button")).sendKeys(Keys.ENTER);
